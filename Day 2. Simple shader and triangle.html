@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Day 2. Simple shader and triangle</title>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+    }
+
+    #canvas {
+      width: 400px;
+      height: 400px;
+    }
+
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="400" height="400"></canvas>
+  <script>
+    function compileShader(shader, source) {
+      gl.shaderSource(shader, source)
+      gl.compileShader(shader)
+      const log = gl.getShaderInfoLog(shader)
+      if (log) {
+        throw new Error(log)
+      }
+    }
+
+    const canvas = document.getElementById('canvas')
+    const gl = canvas.getContext('webgl')
+
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER)
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER)
+
+    const vShaderSource = `
+      #define PI 3.1415926535
+      attribute vec2 position;
+      void main() {
+        gl_PointSize = 1.0;
+        gl_Position = vec4(position / PI, 0, 1);
+      }
+    `
+    const fShaderSource = `
+      precision mediump float;
+      void main() {
+        gl_FragColor = vec4(1, 0, 0, 1);
+      }
+    `
+    compileShader(vertexShader, vShaderSource)
+    compileShader(fragmentShader, fShaderSource)
+
+    const program = gl.createProgram()
+    gl.attachShader(program, vertexShader)
+    gl.attachShader(program, fragmentShader)
+    gl.linkProgram(program)
+    gl.useProgram(program)
+
+    const cosArr = []
+    for (let x = -Math.PI; x <= Math.PI; x += Math.PI / 1000) {
+      const y = Math.cos(x)
+      cosArr.push(x, y)
+    }
+    const positionData = new Float32Array(cosArr)
+
+    const positionPointer = gl.getAttribLocation(program, 'position')
+    const positionBuffer = gl.createBuffer(gl.ARRAY_BUFFER)
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
+    gl.bufferData(gl.ARRAY_BUFFER, positionData, gl.STATIC_DRAW)
+
+    const attributeSize = 2
+    const type = gl.FLOAT
+    const normalized = false
+    const stride = 0
+    const offset = 0
+    gl.enableVertexAttribArray(positionPointer)
+    gl.vertexAttribPointer(positionPointer, attributeSize, type, normalized, stride, offset)
+
+    gl.drawArrays(gl.POINTS, 0, positionData.length / 2)
+
+  </script>
+</body>
+</html>

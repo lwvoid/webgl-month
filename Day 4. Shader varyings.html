@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Day 4. Shader varyings</title>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+    }
+
+    #canvas {
+      width: 400px;
+      height: 400px;
+    }
+
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="400" height="400"></canvas>
+  <script>
+    function compileShader(shader, source) {
+      gl.shaderSource(shader, source)
+      gl.compileShader(shader)
+      const log = gl.getShaderInfoLog(shader)
+      if (log) {
+        throw new Error(log)
+      }
+    }
+
+    function fillWithColors(segmentsCount, color) {
+      const colors = []
+      for (let i = 0; i < segmentsCount; i++) {
+        for (let j = 0; j < 3; j++) {
+          if (j == 0) {
+            colors.push(255, 255, 255, 255)
+          } else {
+            colors.push(...color)
+          }
+        }
+      }
+
+      return colors;
+    }
+
+
+    function createHexagon(centerX, centerY, radius, segmentsCount) {
+      const vertices = []
+      const TWOPI = Math.PI * 2
+      for (let i = 1; i <= segmentsCount; i++) {
+        const from = (i - 1) / segmentsCount * TWOPI
+        const to = i / segmentsCount * TWOPI
+        vertices.push(centerX, centerY)
+        vertices.push(centerX + Math.sin(from) * radius, centerY + Math.cos(from) * radius)
+        vertices.push(centerX + Math.sin(to) * radius, centerY + Math.cos(to) * radius)
+      }
+      return vertices
+    }
+
+    const canvas = document.getElementById('canvas')
+    const gl = canvas.getContext('webgl')
+
+    const vertexShader = gl.createShader(gl.VERTEX_SHADER)
+    const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER)
+
+    const vertexShaderSource = `
+      attribute vec2 position;
+      attribute vec4 color;
+      uniform vec2 resolution;
+
+      varying vec4 vColor;
+
+      void main() {
+        vec2 transformedPosition = position / resolution * 2.0 - 1.0;
+        gl_Position = vec4(transformedPosition, 0, 1);
+
+        vColor = color;
+      }
+    `
+
+    const fragmentShaderSource = `
+      precision mediump float;
+      varying vec4 vColor;
+      
+      void main() {
+        gl_FragColor = vColor / 255.0;
+      }
+    `
+
+    compileShader(vertexShader, vertexShaderSource)
+    compileShader(fragmentShader, fragmentShaderSource)
+
+
+    const program = gl.createProgram()
+    gl.attachShader(program, vertexShader)
+    gl.attachShader(program, fragmentShader)
+    gl.linkProgram(program)
+    gl.useProgram(program)
+
+
+    const resolutionUniformLocation = gl.getUniformLocation(program, 'resolution')
+    gl.uniform2fv(resolutionUniformLocation, [canvas.width, canvas.height])
+
+    const segmentsCount = 64
+    const times = 7
+    const triangles = []
+    for (let i = 0; i < times; i++) {
+      const tmp = createHexagon(canvas.width / 2, canvas.height / 2, 70 - 10 * i, segmentsCount)
+      triangles.push(...tmp)
+    }
+    const positionData = new Float32Array(triangles)
+    const positionLocation = gl.getAttribLocation(program, 'position')
+    const positionBuffer = gl.createBuffer(gl.ARRAY_BUFFER)
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
+    gl.bufferData(gl.ARRAY_BUFFER, positionData, gl.STATIC_DRAW)
+    gl.enableVertexAttribArray(positionLocation)
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
+
+
+    const colors = []
+    const colorIndex = [
+      [255, 0, 0, 255], 
+      [255, 165, 0, 255], 
+      [255, 255, 0, 255], 
+      [0, 255, 0, 255], 
+      [0, 127, 255, 255], 
+      [0, 0, 255, 255], 
+      [139, 0, 255, 255]
+    ]
+    for (let i = 0; i < times; i++) {
+      const tmp = fillWithColors(segmentsCount, colorIndex[i])
+      colors.push(...tmp)
+    }
+    
+    const colorData = new Float32Array(colors)
+    const colorLocation = gl.getAttribLocation(program, 'color')
+    const colorBuffer = gl.createBuffer(gl.ARRAY_BUFFER)
+    gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer)
+    gl.bufferData(gl.ARRAY_BUFFER, colorData, gl.STATIC_DRAW)
+    gl.enableVertexAttribArray(colorLocation)
+    gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 0, 0)
+
+    gl.drawArrays(gl.TRIANGLES, 0, positionData.length / 2)
+  </script>
+</body>
+</html>
