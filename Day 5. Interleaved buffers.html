@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Day 5. Interleaved buffers</title>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+    }
+
+    #canvas {
+      width: 400px;
+      height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="400" height="400"></canvas>
+  <script>
+    function initShader(shaderType, source) {
+      const shader = gl.createShader(shaderType)
+      gl.shaderSource(shader, source)
+      gl.compileShader(shader)
+
+      const log = gl.getShaderInfoLog(shader)
+      if (log) {
+        throw new Error(log)
+      }
+  
+      return shader
+    }
+
+
+    function initProgram(vertexShader, fragmentShader) {
+      const program = gl.createProgram()
+      gl.attachShader(program, vertexShader)
+      gl.attachShader(program, fragmentShader)
+      gl.linkProgram(program)
+
+      const log = gl.getProgramInfoLog(program)
+      if (log) {
+        throw new Error(log)
+      }
+
+      return program
+    }
+
+
+    function getVertices() {
+      const colorArr = [
+        [255, 0, 0, 255], 
+        [255, 165, 0, 255], 
+        [255, 255, 0, 255], 
+        [0, 255, 0, 255], 
+        [0, 127, 255, 255], 
+        [0, 0, 255, 255], 
+        [139, 0, 255, 255]
+      ]
+
+      const vertices = []
+
+      const centerX = canvas.width / 2
+      const centerY = canvas.height / 2
+      const segment = 7
+      const radius = 100
+      
+      const PI2 = Math.PI * 2
+      for (let i = 1; i <= segment; i++) {
+        const color = colorArr[i - 1]
+
+        const from = (i - 1) / segment * PI2
+        const to = i / segment * PI2
+
+        vertices.push(centerX, centerY)
+        vertices.push(...color)
+
+        vertices.push(centerX + radius * Math.sin(from), centerY + radius * Math.cos(from))
+        vertices.push(...color)
+  
+        vertices.push(centerX + radius * Math.sin(to), centerY + radius * Math.cos(to))
+        vertices.push(...color)
+      }
+
+      return new Float32Array(vertices)
+    }
+
+    const canvas = document.getElementById('canvas')
+    const gl = canvas.getContext('webgl')
+
+    const vertexShaderSource = `
+      attribute vec2 position;
+      attribute vec4 color;
+      uniform vec2 resolution;
+
+      varying vec4 vColor;
+
+      void main() {
+        vec2 transformedPosition = position / resolution * 2.0 - 1.0;
+        gl_Position = vec4(transformedPosition, 0, 1.0);
+
+        vColor = color;
+      }
+
+    `
+
+    const fragmentShaderSource = `
+      precision mediump float;
+      varying vec4 vColor;
+
+      void main() {
+        gl_FragColor = vColor / 255.0;
+      }
+    `
+
+    const vertexShader = initShader(gl.VERTEX_SHADER, vertexShaderSource)
+    const fragmentShader = initShader(gl.FRAGMENT_SHADER, fragmentShaderSource)
+    const program = initProgram(vertexShader, fragmentShader)
+    gl.useProgram(program)
+
+    const resolutionLocation = gl.getUniformLocation(program, 'resolution')
+    gl.uniform2fv(resolutionLocation, [canvas.width, canvas.height])
+
+    const vertices = getVertices()
+    const buffer = gl.createBuffer(gl.ARRAY_BUFFER)
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
+
+    const positionLocation = gl.getAttribLocation(program, 'position')
+    gl.enableVertexAttribArray(positionLocation)
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 24, 0)
+
+    const colorLocation = gl.getAttribLocation(program, 'color')
+    gl.enableVertexAttribArray(colorLocation)
+    gl.vertexAttribPointer(colorLocation, 4, gl.FLOAT, false, 24, 8)
+
+    gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 6)
+  </script>
+</body>
+</html>
