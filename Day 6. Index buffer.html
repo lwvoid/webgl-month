@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Day 6. Indexed buffer</title>
+  <style>
+    * {
+      padding: 0;
+      margin: 0;
+    }
+
+    #canvas {
+      width: 400px;
+      height: 400px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="canvas" width="400" height="400"></canvas>
+  <script>
+    function initShader(shaderType, source) {
+      const shader = gl.createShader(shaderType)
+      gl.shaderSource(shader, source)
+      gl.compileShader(shader)
+
+      const log = gl.getShaderInfoLog(shader)
+      if (log) {
+        throw new Error(log)
+      }
+  
+      return shader
+    }
+
+
+    function initProgram(vertexShader, fragmentShader) {
+      const program = gl.createProgram()
+      gl.attachShader(program, vertexShader)
+      gl.attachShader(program, fragmentShader)
+      gl.linkProgram(program)
+
+      const log = gl.getProgramInfoLog(program)
+      if (log) {
+        throw new Error(log)
+      }
+
+      return program
+    }
+
+
+    function getVertices() {
+      const centerX = canvas.width / 2
+      const centerY = canvas.height / 2
+      const vertices = [
+        centerX - 200, centerY - 100,
+        centerX + 200, centerY - 100,
+        centerX + 200, centerY + 100,
+        centerX - 200, centerY + 100,
+      ]
+      return new Float32Array(vertices)
+    }
+
+    const canvas = document.getElementById('canvas')
+    const gl = canvas.getContext('webgl')
+
+    const vertexShaderSource = `
+      attribute vec2 position;
+      uniform vec2 resolution;
+
+      void main() {
+        vec2 transformedPosition = position / resolution * 2.0 - 1.0;
+        gl_Position = vec4(transformedPosition, 0, 1.0);
+      }
+    `
+
+    const fragmentShaderSource = `
+      precision mediump float;
+
+      void main() {
+        gl_FragColor = vec4(0, 0, 0, 1.0);
+      }
+    `
+
+    const vertexShader = initShader(gl.VERTEX_SHADER, vertexShaderSource)
+    const fragmentShader = initShader(gl.FRAGMENT_SHADER, fragmentShaderSource)
+    const program = initProgram(vertexShader, fragmentShader)
+    gl.useProgram(program)
+
+    const resolutionLocation = gl.getUniformLocation(program, 'resolution')
+    gl.uniform2fv(resolutionLocation, [canvas.width, canvas.height])
+
+    const indexData = new Uint8Array([
+      0, 1, 2,
+      2, 3, 0,
+    ])
+    const indexBuffer = gl.createBuffer(gl.ELEMENT_ARRAY_BUFFER)
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer)
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indexData, gl.STATIC_DRAW)
+
+    const vertices = getVertices()
+    const buffer = gl.createBuffer(gl.ARRAY_BUFFER)
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
+    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW)
+
+    const positionLocation = gl.getAttribLocation(program, 'position')
+    gl.enableVertexAttribArray(positionLocation)
+    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0)
+
+    gl.drawElements(gl.TRIANGLES, indexData.length, gl.UNSIGNED_BYTE, 0)
+  </script>
+</body>
+</html>
