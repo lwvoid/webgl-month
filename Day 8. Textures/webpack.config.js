@@ -23,6 +23,10 @@ module.exports = {
       {
         test: /\.glsl$/,
         use: 'raw-loader',
+      },
+      {
+        test: /\.(jpg|png|svg|gif)$/,
+        use: 'url-loader',
       }
     ]
   },
@@ -34,5 +38,5 @@ module.exports = {
       inject: true,
       hash: false,
     }),
-  ]
+  ],
 }
