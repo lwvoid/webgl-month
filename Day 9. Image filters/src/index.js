@@ -49,7 +49,7 @@ async function main() {
   
   gl.activeTexture(gl.TEXTURE0)
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, textureImage)
-  
+
   gl.uniform1i(uniformLocation.texture, 0)
   gl.uniform2fv(uniformLocation.resolution, [canvas.width, canvas.height])
 
