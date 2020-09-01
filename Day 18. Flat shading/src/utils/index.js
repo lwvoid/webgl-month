@@ -183,26 +183,52 @@ export default {
 
     const parseFace = (line) => {
      return line.replace('f ', '').split(' ').map(chunk => {
-        return chunk.split('/').map(Number)[0] - 1
+        return chunk.split('/').map(Number)
       })
     }
 
-    const vertices = []
-    const indices = []
+    const parseNormal = (line) => {
+      return line.replace('vn ', '').split(' ').map(Number)
+    }
+
+    const objVertices = []
+    const objNormals = []
+    const objVertexIndices = []
+    const objNormalIndices = []
 
     objSource.split('\n').forEach(line => {
       if (line.startsWith('v ')) {
-        vertices.push(...parseVertex(line))
+        objVertices.push(parseVertex(line))
+      }
+
+      if (line.startsWith('vn ')) {
+        objNormals.push(parseNormal(line))
       }
 
       if (line.startsWith('f ')) {
-        indices.push(...parseFace(line))
+        const objFace = parseFace(line)
+        objVertexIndices.push(...objFace.map(face => face[0] - 1))
+        objNormalIndices.push(...objFace.map(face => face[2] - 1))
       }
     })
 
+    const vertices = []
+    const normals = []
+    for (let i = 0; i < objVertexIndices.length; i++) {
+      const vertexIndex = objVertexIndices[i]
+      const normalIndex = objNormalIndices[i]
+
+      const vertex = objVertices[vertexIndex]
+      const normal = objNormals[normalIndex]
+
+      vertices.push(...vertex)
+      normals.push(...normal)
+    }
+
+
     return {
       vertices: new Float32Array(vertices),
-      indices: new Uint16Array(indices),
+      normals: new Float32Array(normals), 
     }
   }
 }
